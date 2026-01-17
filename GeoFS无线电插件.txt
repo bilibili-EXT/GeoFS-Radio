@@ -1,0 +1,78 @@
+    } catch (e) {
+      console.warn('applyFlightPlan 调用失败', e);
+      setStatus('已保存，但未能应用到 GeoFS（未检测到 API）。', '#f6c26b');
+    }
+  });
+  btnClear.addEventListener('click', clearStorage);
+
+  pinBtn.addEventListener('click', () => {
+    pinned = !pinned;
+    pinBtn.textContent = pinned ? 'Unpin' : 'Pin';
+    pinBtn.classList.toggle('ghost', !pinned);
+  });
+
+  // 切换面板显示（按 '/' 键），当焦点在输入框或textarea上时不响应
+  window.addEventListener('keydown', (e) => {
+    if (e.key === '/' || e.key === 'Slash') {
+      const ae = document.activeElement;
+      const tag = ae && ae.tagName ? ae.tagName.toLowerCase() : '';
+      const isTyping = tag === 'input' || tag === 'textarea' || ae && ae.isContentEditable;
+      if (!isTyping) {
+        e.preventDefault();
+        togglePanel();
+      }
+    }
+  }, { capture: true });
+
+  function togglePanel(show) {
+    if (typeof show === 'boolean') {
+      panel.classList.toggle('hidden', !show);
+    } else {
+      panel.classList.toggle('hidden');
+    }
+    if (!panel.classList.contains('hidden')) {
+      inpFlight.focus();
+    }
+  }
+
+  // 尝试应用到 GeoFS（占位）。这里示例了几种可能的接入点：
+  // - 如果 GeoFS 提供了设置飞机或航路的 JS API，可以在这里调用。
+  // - 我会尝试检测常见全局对象，例如 window.geojs / window.GEOFS / window.geofs 等。
+  function applyFlightPlan({ flight, dep, arr } = {}) {
+    // 示范性日志/用户提示
+    console.log('applyFlightPlan called with', { flight, dep, arr });
+
+    // 尝试检测 GeoFS 全局对象（此处仅作尝试，具体 API 需要根据 GeoFS 版本和暴露内容调整）
+    const candidates = [window.geojs, window.Geo, window.GeoFS, window.geo, window.geofs, window.GEOFS, window.geoServer];
+    const found = candidates.find(c => typeof c !== 'undefined' && c !== null);
+    if (!found) {
+      setStatus('未检测到 GeoFS 全局对象 — 仅本地保存。若要自动设置位置/航路，请授权/告知 GeoFS API。', '#f6c26b');
+      return { ok: false, reason: 'no-geo' };
+    }
+
+    // 如果找到，你可以在这里对接具体方法，例如（伪代码）：
+    // if (found.setFlightPlan) { found.setFlightPlan({callsign: flight, from: dep, to: arr}); }
+    // 或者切换到起飞机场位置：
+    // if (found.setViewToAirport) { found.setViewToAirport(dep); }
+
+    // 下面仅做一个安全的示例：如果对象有 console-like 信息就输出
+    setStatus('检测到 GeoFS 全局对象，已保存信息。请告诉我你想要的自动行为（切换起飞位置/设置航路/发送给 ATC）以便我实现对接。');
+    return { ok: true };
+  }
+
+  // 初始加载
+  loadFromStorage();
+
+  // 导出到全局以便开发者在控制台操作
+  window.geoRadio = {
+    panel,
+    togglePanel,
+    saveToStorage,
+    loadFromStorage,
+    clearStorage,
+    applyFlightPlan
+  };
+
+  // 显示一次帮助提示
+  console.info('GeoFS Radio Plugin 已注入。按 "/" 切换面板。调用 window.geoRadio.applyFlightPlan({flight:"CCA123", dep:"ZBAA", arr:"ZSPD"}) 可从控制台测试。');
+})();
